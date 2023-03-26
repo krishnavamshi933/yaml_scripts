@@ -1,0 +1,47 @@
+---
+- name: Install Jenkins
+  hosts: remote_server
+  become: true
+  vars:
+    jenkins_version: "2.249.3"
+    jenkins_http_port: 9000
+  tasks:
+    - name: Install Java
+      yum:
+        name: java-1.8.0-openjdk-devel
+        state: present
+
+    - name: Add Jenkins Repository Key
+      rpm_key:
+        state: present
+        key: https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+
+    - name: Add Jenkins Repository
+      yum_repository:
+        name: jenkins
+        description: Jenkins Repository
+        baseurl: https://pkg.jenkins.io/redhat-stable/
+        enabled: yes
+        gpgcheck: yes
+        gpgkey: https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+
+    - name: Install Jenkins
+      yum:
+        name: jenkins-{{ jenkins_version }}
+        state: present
+
+    - name: Modify Jenkins HTTP Port
+      lineinfile:
+        path: /etc/sysconfig/jenkins
+        regexp: '^JENKINS_PORT='
+        line: 'JENKINS_PORT="{{ jenkins_http_port }}"'
+        state: present
+
+    - name: Reload Systemd Configuration
+      systemd:
+        daemon_reload: yes
+
+    - name: Start Jenkins Service
+      systemd:
+        name: jenkins
+        state: started
